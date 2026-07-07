@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投資総合シミュレーター</title>
+
+<style>
+body {
+  font-family: sans-serif;
+  background: #f0f2f5;
+  text-align: center;
+  padding: 20px;
+}
+
+.container {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 440px;
+  margin: auto;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.main-tabs {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #ccc;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  background: #e4e6eb;
+  border: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.tab-btn.active {
+  background: #007bff;
+  color: white;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+button {
+  padding: 10px 15px;
+  margin: 5px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.modeBtn {
+  background: #ccc;
+}
+
+.modeBtn.sub-active {
+  background: #007bff;
+  color: white;
+}
+
+.calc { background: #007bff; color: white; }
+.tax { background: #dc3545; color: white; }
+.nisa { background: #28a745; color: white; }
+.fxtax { background: #28a745; color: white; }
+
+input {
+  width: 90%;
+  padding: 8px;
+  margin: 8px 0;
+}
+
+.result {
+  margin-top: 15px;
+  font-weight: bold;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="main-tabs">
+  <button class="tab-btn active" onclick="switchMainTab('trustTab', this)">投資信託</button>
+  <button class="tab-btn" onclick="switchMainTab('fxTab', this)">FX</button>
+</div>
+
+<!-- 投資/銀行 -->
+<div id="trustTab" class="tab-content active">
+<h2 id="title">投資シミュレーター</h2>
+
+<button class="modeBtn sub-active" onclick="setMode('invest')" id="investBtn">投資</button>
+<button class="modeBtn" onclick="setMode('bank')" id="bankBtn">銀行</button>
+
+<br><br>
+
+<label id="monthlyLabel">毎月の投資額（円）</label><br>
+<input type="number" id="monthly" value="10000"><br>
+
+<label id="rateLabel">年利（%） ※-5〜+5</label><br>
+<input type="number" id="rate" value="3.0" step="0.1" oninput="adjustRate()"><br>
+
+<label>運用期間（年）</label><br>
+<input type="number" id="years" value="5" min="1" max="50" oninput="limitYears()"><br>
+
+<button class="calc" onclick="calculateTrust()">計算</button>
+<button class="tax" onclick="applyTrustTax()">課税</button>
+<button class="nisa" onclick="applyNISA()">NISA</button>
+
+<div class="result" id="trustOutput"></div>
+</div>
+
+<!-- FX -->
+<div id="fxTab" class="tab-content">
+<h2>FXシミュレーター</h2>
+
+<label>投資金額（円）</label><br>
+<input type="number" id="yen" value="100000"><br>
+
+<label>レバレッジ（最大25倍）</label><br>
+<input type="number" id="leverage" value="20" min="1" max="25" oninput="limitLeverage()"><br>
+
+<label>購入レート</label><br>
+<input type="number" id="buyRate" value="161"><br>
+
+<label>売却レート</label><br>
+<input type="number" id="sellRate" value="162"><br>
+
+<button class="calc" onclick="calculateFX()">計算</button>
+<button class="fxtax" onclick="applyFXTax()">税金</button>
+
+<div class="result" id="fxOutput"></div>
+</div>
+
+</div>
+
+<script>
+// タブ切替
+function switchMainTab(id, btn){
+  document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// 投資/銀行
+let mode="invest";
+let finalAmount=0, invested=0, profit=0;
+
+function setMode(m){
+  mode=m;
+  document.getElementById("investBtn").classList.remove("sub-active");
+  document.getElementById("bankBtn").classList.remove("sub-active");
+
+  if(m==="invest"){
+    document.getElementById("title").innerText="投資シミュレーター";
+    document.getElementById("monthlyLabel").innerText="毎月の投資額（円）";
+    document.getElementById("rateLabel").innerText="年利（%） ※-5〜+5";
+    document.getElementById("rate").value="3.0";
+    document.getElementById("investBtn").classList.add("sub-active");
+  }else{
+    document.getElementById("title").innerText="銀行預金シミュレーター";
+    document.getElementById("monthlyLabel").innerText="毎月の預入額（円）";
+    document.getElementById("rateLabel").innerText="年利（%） ※0〜5";
+    document.getElementById("rate").value="0.5";
+    document.getElementById("bankBtn").classList.add("sub-active");
+  }
+}
+
+function limitYears(){
+  let y=parseInt(years.value);
+  if(y<1)y=1;
+  if(y>50)y=50;
+  years.value=y;
+}
+
+function adjustRate(){
+  let r=parseFloat(rate.value);
+  if(mode==="invest"){
+    if(r>5)r=5;
+    if(r<-5)r=-5;
+  }else{
+    if(r>5)r=5;
+    if(r<0)r=0;
+  }
+  rate.value=(Math.round(r*10)/10).toFixed(1);
+}
+
+function calculateTrust(){
+  let m=+monthly.value;
+  let r=+rate.value/100;
+  let y=+years.value;
+
+  let total=0;
+
+  if(mode==="invest"){
+    let mr=r/12;
+    for(let i=0;i<y*12;i++){
+      total=(total+m)*(1+mr);
+    }
+    invested=m*y*12;
+  }else{
+    for(let i=0;i<y;i++){
+      total=(total+m*12)*(1+r);
+    }
+    invested=m*12*y;
+  }
+
+  finalAmount=total;
+  profit=total-invested;
+
+  trustOutput.innerHTML=`最終金額：${total.toFixed(0)}円<br>元本：${invested}円<br>利益：${profit.toFixed(0)}円`;
+}
+
+function applyTrustTax(){
+  let tax=profit*0.20315;
+  let after=finalAmount-tax;
+  trustOutput.innerHTML=`税後：${after.toFixed(0)}円<br>利益：${(after-invested).toFixed(0)}円`;
+}
+
+function applyNISA(){
+  if(mode!=="invest"){
+    trustOutput.innerHTML="銀行は非課税対象外";
+    return;
+  }
+  trustOutput.innerHTML=`NISA：${finalAmount.toFixed(0)}円<br>利益：${profit.toFixed(0)}円`;
+}
+
+// FX
+let fxProfit=0;
+
+function limitLeverage(){
+  if(leverage.value>25)leverage.value=25;
+}
+
+function calculateFX(){
+  let y=+yen.value;
+  let l=+leverage.value;
+  let b=+buyRate.value;
+  let s=+sellRate.value;
+
+  let total=y*l;
+  let usd=total/b;
+  let final=usd*s;
+
+  fxProfit=final-total;
+
+  fxOutput.innerHTML=`利益：${fxProfit.toFixed(0)}円`;
+}
+
+function applyFXTax(){
+  let tax=fxProfit*0.20315;
+  fxOutput.innerHTML=`手取り：${(fxProfit-tax).toFixed(0)}円`;
+}
+</script>
+
+</body>
+</html>
