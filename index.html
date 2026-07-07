@@ -2,10 +2,15 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>投資総合シミュレーター</title>
 
 <style>
+/* ページ全体、およびすべてのボタン・入力欄でダブルタップズームを禁止 */
+html, body, button, input, .os-keyboard button {
+  touch-action: manipulation;
+}
+
 body {
   font-family: sans-serif;
   background: #f0f2f5;
@@ -236,10 +241,8 @@ let currentInput = null;
 document.addEventListener("DOMContentLoaded", () => {
   const inputs = document.querySelectorAll("input");
   inputs.forEach(input => {
-    // 端末標準のキーボードを出さない設定
     input.setAttribute("inputmode", "none");
     
-    // クリック・フォーカス時に自作キーボードを表示
     input.addEventListener("focus", (e) => {
       currentInput = e.target;
       document.getElementById("keyboard").style.display = "grid";
@@ -257,14 +260,12 @@ function pressKey(key) {
   } else if (key === 'clear') {
     currentInput.value = '';
   } else if (key === 'minus') {
-    // マイナス符号の反転（年利向け）
     if (val.startsWith('-')) {
       currentInput.value = val.slice(1);
     } else {
       currentInput.value = '-' + val;
     }
   } else if (key === '.') {
-    // 小数点が重複しないようにチェック
     if (!val.includes('.')) {
       currentInput.value = val + '.';
     }
@@ -272,7 +273,6 @@ function pressKey(key) {
     currentInput.value = val + key;
   }
   
-  // 入力されたタイミングで各種バリデーション関数を実行
   triggerInputValidation();
 }
 
@@ -284,7 +284,6 @@ function closeKeyboard() {
   }
 }
 
-// どのinputが動いているかに応じて元のチェック関数に割り振る
 function triggerInputValidation() {
   if (!currentInput) return;
   if (currentInput.id === "years") limitYears();
@@ -327,7 +326,7 @@ function setMode(m){
 
 function limitYears(){
   let y=parseInt(years.value);
-  if(isNaN(y)) return; // 入力途中はスキップ
+  if(isNaN(y)) return; 
   if(y<1)y=1;
   if(y>50)y=50;
   years.value=y;
@@ -335,9 +334,7 @@ function limitYears(){
 
 function adjustRate(){
   let r=parseFloat(rate.value);
-  if(isNaN(r)) return; // 入力途中やマイナス記号のみのときはスキップ
-  
-  // 文字列の最後が「.」の場合はユーザーが小数点を入力中なので確定させない
+  if(isNaN(r)) return; 
   if(rate.value.endsWith('.')) return;
 
   if(mode==="invest"){
@@ -347,7 +344,6 @@ function adjustRate(){
     if(r>5)r=5;
     if(r<0)r=0;
   }
-  // 入力中の操作感を損なわないため、範囲を超えた時だけ値を上書き
   if(parseFloat(rate.value) > 5 || parseFloat(rate.value) < -5 || (mode==="bank" && parseFloat(rate.value) < 0)) {
     rate.value=(Math.round(r*10)/10).toFixed(1);
   }
