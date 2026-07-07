@@ -11,6 +11,7 @@ body {
   background: #f0f2f5;
   text-align: center;
   padding: 20px;
+  margin: 0;
 }
 
 .container {
@@ -20,6 +21,7 @@ body {
   max-width: 440px;
   margin: auto;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-bottom: 220px; /* キーボード表示時の被り防止スペース */
 }
 
 .main-tabs {
@@ -80,6 +82,15 @@ input {
   width: 90%;
   padding: 8px;
   margin: 8px 0;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* 選択中の入力を分かりやすく */
+input:focus {
+  outline: 2px solid #007bff;
+  background: #f0f7ff;
 }
 
 .result {
@@ -88,6 +99,51 @@ input {
   background: #f8f9fa;
   padding: 12px;
   border-radius: 6px;
+}
+
+/* オンスクリーンキーボードのスタイル */
+.os-keyboard {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #d1d5db;
+  padding: 10px;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
+  display: none; /* 初期状態は非表示 */
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  max-width: 480px;
+  margin: 0 auto;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  z-index: 1000;
+}
+
+.os-keyboard button {
+  background: white;
+  color: #111827;
+  border: none;
+  padding: 15px 0;
+  font-size: 18px;
+  border-radius: 6px;
+  margin: 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  user-select: none;
+}
+
+.os-keyboard button:active {
+  background: #e5e7eb;
+}
+
+.os-keyboard .key-action {
+  background: #9ca3af;
+  color: white;
+}
+
+.os-keyboard .key-close {
+  background: #4b5563;
+  color: white;
 }
 </style>
 </head>
@@ -111,13 +167,13 @@ input {
 <br><br>
 
 <label id="monthlyLabel">毎月の投資額（円）</label><br>
-<input type="number" id="monthly" value="10000"><br>
+<input type="text" inputmode="none" id="monthly" value="10000"><br>
 
 <label id="rateLabel">年利（%） ※-5〜+5</label><br>
-<input type="number" id="rate" value="3.0" step="0.1" oninput="adjustRate()"><br>
+<input type="text" inputmode="none" id="rate" value="3.0"><br>
 
 <label>運用期間（年）</label><br>
-<input type="number" id="years" value="5" min="1" max="50" oninput="limitYears()"><br>
+<input type="text" inputmode="none" id="years" value="5"><br>
 
 <button class="calc" onclick="calculateTrust()">計算</button>
 <button class="tax" onclick="applyTrustTax()">課税</button>
@@ -131,16 +187,16 @@ input {
 <h2>FXシミュレーター</h2>
 
 <label>投資金額（円）</label><br>
-<input type="number" id="yen" value="100000"><br>
+<input type="text" inputmode="none" id="yen" value="100000"><br>
 
 <label>レバレッジ（最大25倍）</label><br>
-<input type="number" id="leverage" value="20" min="1" max="25" oninput="limitLeverage()"><br>
+<input type="text" inputmode="none" id="leverage" value="20"><br>
 
 <label>購入レート</label><br>
-<input type="number" id="buyRate" value="161"><br>
+<input type="text" inputmode="none" id="buyRate" value="161"><br>
 
 <label>売却レート</label><br>
-<input type="number" id="sellRate" value="162"><br>
+<input type="text" inputmode="none" id="sellRate" value="162"><br>
 
 <button class="calc" onclick="calculateFX()">計算</button>
 <button class="fxtax" onclick="applyFXTax()">税金</button>
@@ -150,9 +206,95 @@ input {
 
 </div>
 
+<!-- オンスクリーンキーボード構造 -->
+<div id="keyboard" class="os-keyboard">
+  <button onclick="pressKey('1')">1</button>
+  <button onclick="pressKey('2')">2</button>
+  <button onclick="pressKey('3')">3</button>
+  <button class="key-action" onclick="pressKey('back')">⌫</button>
+  
+  <button onclick="pressKey('4')">4</button>
+  <button onclick="pressKey('5')">5</button>
+  <button onclick="pressKey('6')">6</button>
+  <button class="key-action" onclick="pressKey('minus')">±</button>
+  
+  <button onclick="pressKey('7')">7</button>
+  <button onclick="pressKey('8')">8</button>
+  <button onclick="pressKey('9')">9</button>
+  <button class="key-action" onclick="pressKey('clear')">C</button>
+  
+  <button onclick="pressKey('.')">.</button>
+  <button onclick="pressKey('0')">0</button>
+  <button onclick="pressKey('00')">00</button>
+  <button class="key-close" onclick="closeKeyboard()">閉じる</button>
+</div>
+
 <script>
+// キーボード制御用
+let currentInput = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  const inputs = document.querySelectorAll("input");
+  inputs.forEach(input => {
+    // 端末標準のキーボードを出さない設定
+    input.setAttribute("inputmode", "none");
+    
+    // クリック・フォーカス時に自作キーボードを表示
+    input.addEventListener("focus", (e) => {
+      currentInput = e.target;
+      document.getElementById("keyboard").style.display = "grid";
+    });
+  });
+});
+
+function pressKey(key) {
+  if (!currentInput) return;
+  
+  let val = currentInput.value;
+  
+  if (key === 'back') {
+    currentInput.value = val.slice(0, -1);
+  } else if (key === 'clear') {
+    currentInput.value = '';
+  } else if (key === 'minus') {
+    // マイナス符号の反転（年利向け）
+    if (val.startsWith('-')) {
+      currentInput.value = val.slice(1);
+    } else {
+      currentInput.value = '-' + val;
+    }
+  } else if (key === '.') {
+    // 小数点が重複しないようにチェック
+    if (!val.includes('.')) {
+      currentInput.value = val + '.';
+    }
+  } else {
+    currentInput.value = val + key;
+  }
+  
+  // 入力されたタイミングで各種バリデーション関数を実行
+  triggerInputValidation();
+}
+
+function closeKeyboard() {
+  document.getElementById("keyboard").style.display = "none";
+  if (currentInput) {
+    currentInput.blur();
+    currentInput = null;
+  }
+}
+
+// どのinputが動いているかに応じて元のチェック関数に割り振る
+function triggerInputValidation() {
+  if (!currentInput) return;
+  if (currentInput.id === "years") limitYears();
+  if (currentInput.id === "rate") adjustRate();
+  if (currentInput.id === "leverage") limitLeverage();
+}
+
 // タブ切替
 function switchMainTab(id, btn){
+  closeKeyboard();
   document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
   document.getElementById(id).classList.add('active');
@@ -185,6 +327,7 @@ function setMode(m){
 
 function limitYears(){
   let y=parseInt(years.value);
+  if(isNaN(y)) return; // 入力途中はスキップ
   if(y<1)y=1;
   if(y>50)y=50;
   years.value=y;
@@ -192,6 +335,11 @@ function limitYears(){
 
 function adjustRate(){
   let r=parseFloat(rate.value);
+  if(isNaN(r)) return; // 入力途中やマイナス記号のみのときはスキップ
+  
+  // 文字列の最後が「.」の場合はユーザーが小数点を入力中なので確定させない
+  if(rate.value.endsWith('.')) return;
+
   if(mode==="invest"){
     if(r>5)r=5;
     if(r<-5)r=-5;
@@ -199,7 +347,10 @@ function adjustRate(){
     if(r>5)r=5;
     if(r<0)r=0;
   }
-  rate.value=(Math.round(r*10)/10).toFixed(1);
+  // 入力中の操作感を損なわないため、範囲を超えた時だけ値を上書き
+  if(parseFloat(rate.value) > 5 || parseFloat(rate.value) < -5 || (mode==="bank" && parseFloat(rate.value) < 0)) {
+    rate.value=(Math.round(r*10)/10).toFixed(1);
+  }
 }
 
 function calculateTrust(){
@@ -246,7 +397,9 @@ function applyNISA(){
 let fxProfit=0;
 
 function limitLeverage(){
-  if(leverage.value>25)leverage.value=25;
+  let l=parseInt(leverage.value);
+  if(isNaN(l)) return;
+  if(l>25)leverage.value=25;
 }
 
 function calculateFX(){
