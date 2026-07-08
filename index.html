@@ -175,7 +175,7 @@ input:focus {
 <input type="text" inputmode="none" id="monthly" value="10000"><br>
 
 <label id="rateLabel">年利（%） ※-5〜+5</label><br>
-<input type="text" inputmode="none" id="rate" value="3.0"><br>
+<input type="text" inputmode="none" id="rate" value="5.0"><br>
 
 <label>運用期間（年）</label><br>
 <input type="text" inputmode="none" id="years" value="5"><br>
@@ -313,7 +313,7 @@ function setMode(m){
     document.getElementById("title").innerText="投資シミュレーター";
     document.getElementById("monthlyLabel").innerText="毎月の投資額（円）";
     document.getElementById("rateLabel").innerText="年利（%） ※-5〜+5";
-    document.getElementById("rate").value="3.0";
+    document.getElementById("rate").value="5.0";
     document.getElementById("investBtn").classList.add("sub-active");
   }else{
     document.getElementById("title").innerText="銀行預金シミュレーター";
@@ -358,8 +358,9 @@ function calculateTrust(){
 
   if(mode==="invest"){
     let mr=r/12;
-    for(let i=0;i<y*12;i++){
-      total=(total+m)*(1+mr);
+    // 金融庁等の標準的な積立計算に合わせ、前月までの資産に利息を掛けてから当月分を加算
+    for(let i=0; i<y*12; i++){
+      total = total * (1 + mr) + m;
     }
     invested=m*y*12;
   }else{
