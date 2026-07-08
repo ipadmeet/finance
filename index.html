@@ -355,21 +355,14 @@ function calculateTrust(){
   let y=+years.value;
 
   let total=0;
+  let mr=r/12; // 年利を12ヶ月で割って月利を算出
 
-  if(mode==="invest"){
-    let mr=r/12;
-    // 金融庁等の標準的な積立計算に合わせ、前月までの資産に利息を掛けてから当月分を加算
-    for(let i=0; i<y*12; i++){
-      total = total * (1 + mr) + m;
-    }
-    invested=m*y*12;
-  }else{
-    for(let i=0;i<y;i++){
-      total=(total+m*12)*(1+r);
-    }
-    invested=m*12*y;
+  // 投資・銀行ともに毎月積立の標準的なシミュレーション（期末発生ベース）に統一
+  for(let i=0; i<y*12; i++){
+    total = total * (1 + mr) + m;
   }
 
+  invested=m*y*12;
   finalAmount=total;
   profit=total-invested;
 
