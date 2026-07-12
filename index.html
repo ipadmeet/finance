@@ -292,7 +292,6 @@ function loadSavedData() {
     // サブモード（投資・銀行）の復元
     if (data.mode) {
       setMode(data.mode);
-      // setMode内で値が上書き・クリアされてしまう対策として再適用
       if (data.rate) document.getElementById("rate").value = data.rate;
     }
     
@@ -394,8 +393,10 @@ function calculateTrust(){
   let total=0;
   let mr=r/12; // 月利に換算
 
+  // 「今月ついた利息」に「今月の新しい積立」を足すループに変更
+  // これにより最後の月（最終ループの末尾）に足した金額には利息がかかりません
   for(let i=0; i<y*12; i++){
-    total=(total+m)*(1+mr);
+    total = (total * (1 + mr)) + m;
   }
   invested=m*y*12;
 
