@@ -158,8 +158,8 @@ input:focus {
 <div class="container">
 
 <div class="main-tabs">
-  <button class="tab-btn active" onclick="switchMainTab('trustTab', this)">投資信託</button>
-  <button class="tab-btn" onclick="switchMainTab('fxTab', this)">FX</button>
+  <button class="tab-btn active" id="trustTabBtn" onclick="switchMainTab('trustTab', this)">投資信託</button>
+  <button class="tab-btn" id="fxTabBtn" onclick="switchMainTab('fxTab', this)">FX</button>
 </div>
 
 <!-- 投資/銀行 -->
@@ -238,6 +238,11 @@ input:focus {
 // キーボード制御用
 let currentInput = null;
 
+// 投資/銀行
+let mode="invest";
+let finalAmount=0, invested=0, profit=0;
+let fxProfit=0;
+
 document.addEventListener("DOMContentLoaded", () => {
   const inputs = document.querySelectorAll("input");
   inputs.forEach(input => {
@@ -248,7 +253,58 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("keyboard").style.display = "grid";
     });
   });
+
+  // 保存されたデータを復元
+  loadSavedData();
 });
+
+// ローカルストレージへすべての入力を保存する関数
+function saveAllData() {
+  const data = {
+    monthly: document.getElementById("monthly").value,
+    rate: document.getElementById("rate").value,
+    years: document.getElementById("years").value,
+    yen: document.getElementById("yen").value,
+    leverage: document.getElementById("leverage").value,
+    buyRate: document.getElementById("buyRate").value,
+    sellRate: document.getElementById("sellRate").value,
+    mode: mode,
+    activeTab: document.querySelector('.tab-btn.active').getAttribute('onclick').includes('trustTab') ? 'trustTab' : 'fxTab'
+  };
+  localStorage.setItem("investment_sim_data", JSON.stringify(data));
+}
+
+// 保存されたデータを読み込んで復元する関数
+function loadSavedData() {
+  const saved = localStorage.getItem("investment_sim_data");
+  if (!saved) return;
+
+  try {
+    const data = JSON.parse(saved);
+    if (data.monthly) document.getElementById("monthly").value = data.monthly;
+    if (data.rate) document.getElementById("rate").value = data.rate;
+    if (data.years) document.getElementById("years").value = data.years;
+    if (data.yen) document.getElementById("yen").value = data.yen;
+    if (data.leverage) document.getElementById("leverage").value = data.leverage;
+    if (data.buyRate) document.getElementById("buyRate").value = data.buyRate;
+    if (data.sellRate) document.getElementById("sellRate").value = data.sellRate;
+    
+    // サブモード（投資・銀行）の復元
+    if (data.mode) {
+      setMode(data.mode);
+      // setMode内で値が上書き・クリアされてしまう対策として再適用
+      if (data.rate) document.getElementById("rate").value = data.rate;
+    }
+    
+    // メインタブ（投資信託・FX）の復元
+    if (data.activeTab) {
+      const btnId = data.activeTab === 'trustTab' ? 'trustTabBtn' : 'fxTabBtn';
+      switchMainTab(data.activeTab, document.getElementById(btnId));
+    }
+  } catch (e) {
+    console.error("データの復元に失敗しました", e);
+  }
+}
 
 function pressKey(key) {
   if (!currentInput) return;
@@ -282,13 +338,13 @@ function closeKeyboard() {
     currentInput.blur();
     currentInput = null;
   }
+  saveAllData(); // キーボードを閉じた時に入力を保存
 }
 
 function triggerInputValidation() {
   if (!currentInput) return;
   if (currentInput.id === "years") limitYears();
   if (currentInput.id === "leverage") limitLeverage();
-  // 年利（rate）のバリデーションは制限を外したためここでは呼び出しません
 }
 
 // タブ切替
@@ -298,11 +354,8 @@ function switchMainTab(id, btn){
   document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
+  saveAllData(); // タブ状態を保存
 }
-
-// 投資/銀行
-let mode="invest";
-let finalAmount=0, invested=0, profit=0;
 
 function setMode(m){
   mode=m;
@@ -320,8 +373,8 @@ function setMode(m){
     document.getElementById("rateLabel").innerText="年利（%）";
     document.getElementById("bankBtn").classList.add("sub-active");
   }
-  // 入力ボックスは空のままにし、出力をクリア
   document.getElementById("trustOutput").innerHTML = "";
+  saveAllData(); // モード状態を保存
 }
 
 function limitYears(){
@@ -333,6 +386,7 @@ function limitYears(){
 }
 
 function calculateTrust(){
+  saveAllData(); // 計算時に現在の入力を保存
   let m=+monthly.value;
   let r=+rate.value/100;
   let y=+years.value;
@@ -340,7 +394,6 @@ function calculateTrust(){
   let total=0;
   let mr=r/12; // 月利に換算
 
-  // 投資・銀行ともに毎月積立の月次複利計算に統一
   for(let i=0; i<y*12; i++){
     total=(total+m)*(1+mr);
   }
@@ -354,7 +407,6 @@ function calculateTrust(){
 
 function applyTrustTax(){
   if(finalAmount === 0) return;
-  // 利益がマイナスの場合は課税しない
   let tax = profit > 0 ? profit * 0.20315 : 0;
   let after = finalAmount - tax;
   trustOutput.innerHTML=`税後：${after.toFixed(0)}円<br>利益：${(after-invested).toFixed(0)}円`;
@@ -369,9 +421,6 @@ function applyNISA(){
   trustOutput.innerHTML=`NISA：${finalAmount.toFixed(0)}円<br>利益：${profit.toFixed(0)}円`;
 }
 
-// FX
-let fxProfit=0;
-
 function limitLeverage(){
   let l=parseInt(leverage.value);
   if(isNaN(l)) return;
@@ -379,6 +428,7 @@ function limitLeverage(){
 }
 
 function calculateFX(){
+  saveAllData(); // 計算時に現在の入力を保存
   let y=+yen.value;
   let l=+leverage.value;
   let b=+buyRate.value;
