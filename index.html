@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>投資総合シミュレーター</title>
+<title>投資・銀行総合シミュレーター</title>
 
 <style>
-/* ページ全体、およびすべてのボタン・入力欄でダブルタップズームを禁止 */
-html, body, button, input, .os-keyboard button {
+html, body, button, input {
   touch-action: manipulation;
 }
 
@@ -26,7 +25,7 @@ body {
   max-width: 440px;
   margin: auto;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  margin-bottom: 220px; /* キーボード表示時の被り防止スペース */
+  margin-bottom: 220px;
 }
 
 .main-tabs {
@@ -92,7 +91,6 @@ input {
   border-radius: 4px;
 }
 
-/* 選択中の入力を分かりやすく */
 input:focus {
   outline: 2px solid #007bff;
   background: #f0f7ff;
@@ -106,7 +104,6 @@ input:focus {
   border-radius: 6px;
 }
 
-/* オンスクリーンキーボードのスタイル */
 .os-keyboard {
   position: fixed;
   bottom: 0;
@@ -115,7 +112,7 @@ input:focus {
   background: #d1d5db;
   padding: 10px;
   box-shadow: 0 -2px 10px rgba(0,0,0,0.15);
-  display: none; /* 初期状態は非表示 */
+  display: none;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   max-width: 480px;
@@ -152,13 +149,12 @@ input:focus {
 }
 </style>
 </head>
-
 <body>
 
 <div class="container">
 
 <div class="main-tabs">
-  <button class="tab-btn active" id="trustTabBtn" onclick="switchMainTab('trustTab', this)">投資信託</button>
+  <button class="tab-btn active" id="trustTabBtn" onclick="switchMainTab('trustTab', this)">積立シミュレーター</button>
   <button class="tab-btn" id="fxTabBtn" onclick="switchMainTab('fxTab', this)">FX</button>
 </div>
 
@@ -166,8 +162,8 @@ input:focus {
 <div id="trustTab" class="tab-content active">
 <h2 id="title">投資シミュレーター</h2>
 
-<button class="modeBtn sub-active" onclick="setMode('invest')" id="investBtn">投資</button>
-<button class="modeBtn" onclick="setMode('bank')" id="bankBtn">銀行</button>
+<button class="modeBtn sub-active" onclick="setMode('invest')" id="investBtn">投資(毎月複利)</button>
+<button class="modeBtn" onclick="setMode('bank')" id="bankBtn">銀行(実務単利)</button>
 
 <br><br>
 
@@ -211,7 +207,7 @@ input:focus {
 
 </div>
 
-<!-- オンスクリーンキーボード構造 -->
+<!-- オンスクリーンキーボード -->
 <div id="keyboard" class="os-keyboard">
   <button onclick="pressKey('1')">1</button>
   <button onclick="pressKey('2')">2</button>
@@ -235,10 +231,7 @@ input:focus {
 </div>
 
 <script>
-// キーボード制御用
 let currentInput = null;
-
-// 投資/銀行
 let mode="invest";
 let finalAmount=0, invested=0, profit=0;
 let fxProfit=0;
@@ -247,18 +240,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputs = document.querySelectorAll("input");
   inputs.forEach(input => {
     input.setAttribute("inputmode", "none");
-    
     input.addEventListener("focus", (e) => {
       currentInput = e.target;
       document.getElementById("keyboard").style.display = "grid";
     });
   });
-
-  // 保存されたデータを復元
   loadSavedData();
 });
 
-// ローカルストレージへすべての入力を保存する関数
 function saveAllData() {
   const data = {
     monthly: document.getElementById("monthly").value,
@@ -274,11 +263,9 @@ function saveAllData() {
   localStorage.setItem("investment_sim_data", JSON.stringify(data));
 }
 
-// 保存されたデータを読み込んで復元する関数
 function loadSavedData() {
   const saved = localStorage.getItem("investment_sim_data");
   if (!saved) return;
-
   try {
     const data = JSON.parse(saved);
     if (data.monthly) document.getElementById("monthly").value = data.monthly;
@@ -288,56 +275,31 @@ function loadSavedData() {
     if (data.leverage) document.getElementById("leverage").value = data.leverage;
     if (data.buyRate) document.getElementById("buyRate").value = data.buyRate;
     if (data.sellRate) document.getElementById("sellRate").value = data.sellRate;
-    
-    // サブモード（投資・銀行）の復元
-    if (data.mode) {
-      setMode(data.mode);
-      if (data.rate) document.getElementById("rate").value = data.rate;
-    }
-    
-    // メインタブ（投資信託・FX）の復元
+    if (data.mode) setMode(data.mode);
     if (data.activeTab) {
       const btnId = data.activeTab === 'trustTab' ? 'trustTabBtn' : 'fxTabBtn';
       switchMainTab(data.activeTab, document.getElementById(btnId));
     }
   } catch (e) {
-    console.error("データの復元に失敗しました", e);
+    console.error(e);
   }
 }
 
 function pressKey(key) {
   if (!currentInput) return;
-  
   let val = currentInput.value;
-  
-  if (key === 'back') {
-    currentInput.value = val.slice(0, -1);
-  } else if (key === 'clear') {
-    currentInput.value = '';
-  } else if (key === 'minus') {
-    if (val.startsWith('-')) {
-      currentInput.value = val.slice(1);
-    } else {
-      currentInput.value = '-' + val;
-    }
-  } else if (key === '.') {
-    if (!val.includes('.')) {
-      currentInput.value = val + '.';
-    }
-  } else {
-    currentInput.value = val + key;
-  }
-  
+  if (key === 'back') currentInput.value = val.slice(0, -1);
+  else if (key === 'clear') currentInput.value = '';
+  else if (key === 'minus') currentInput.value = val.startsWith('-') ? val.slice(1) : '-' + val;
+  else if (key === '.') { if (!val.includes('.')) currentInput.value = val + '.'; }
+  else currentInput.value = val + key;
   triggerInputValidation();
 }
 
 function closeKeyboard() {
   document.getElementById("keyboard").style.display = "none";
-  if (currentInput) {
-    currentInput.blur();
-    currentInput = null;
-  }
-  saveAllData(); // キーボードを閉じた時に入力を保存
+  if (currentInput) { currentInput.blur(); currentInput = null; }
+  saveAllData();
 }
 
 function triggerInputValidation() {
@@ -346,14 +308,13 @@ function triggerInputValidation() {
   if (currentInput.id === "leverage") limitLeverage();
 }
 
-// タブ切替
 function switchMainTab(id, btn){
   closeKeyboard();
   document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
-  saveAllData(); // タブ状態を保存
+  saveAllData();
 }
 
 function setMode(m){
@@ -361,75 +322,82 @@ function setMode(m){
   document.getElementById("investBtn").classList.remove("sub-active");
   document.getElementById("bankBtn").classList.remove("sub-active");
 
-  if(m==="invest"){
+  if(m reflections === "invest"){
     document.getElementById("title").innerText="投資シミュレーター";
     document.getElementById("monthlyLabel").innerText="毎月の投資額（円）";
-    document.getElementById("rateLabel").innerText="年利（%）";
     document.getElementById("investBtn").classList.add("sub-active");
   }else{
     document.getElementById("title").innerText="銀行預金シミュレーター";
     document.getElementById("monthlyLabel").innerText="毎月の預入額（円）";
-    document.getElementById("rateLabel").innerText="年利（%）";
     document.getElementById("bankBtn").classList.add("sub-active");
   }
   document.getElementById("trustOutput").innerHTML = "";
-  saveAllData(); // モード状態を保存
+  saveAllData();
 }
 
 function limitYears(){
   let y=parseInt(years.value);
   if(isNaN(y)) return; 
-  if(y<1)y=1;
-  if(y>50)y=50;
+  if(y<1) y=1;
+  if(y>50) y=50;
   years.value=y;
 }
 
 function calculateTrust(){
-  saveAllData(); // 計算時に現在の入力を保存
+  saveAllData();
   let m=+monthly.value;
   let r=+rate.value/100;
   let y=+years.value;
+  let totalMonths = y * 12;
 
-  let total=0;
-  let mr=r/12; // 月利に換算
+  invested = m * totalMonths;
 
-  // 「今月ついた利息」に「今月の新しい積立」を足すループに変更
-  // これにより最後の月（最終ループの末尾）に足した金額には利息がかかりません
-  for(let i=0; i<y*12; i++){
-    total = (total * (1 + mr)) + m;
+  if (mode === "invest") {
+    // 【投資モード】一般的な毎月複利計算（最後の月も運用する前提）
+    let total = 0;
+    let mr = r / 12;
+    for(let i=0; i<totalMonths; i++){
+      total = (total + m) * (1 + mr);
+    }
+    finalAmount = total;
+  } else {
+    // 【銀行モード】日本の銀行の実務ルール（定期積金の給付補填金・積数計算）
+    // 1ヶ月目=59ヶ月運用、2ヶ月目=58ヶ月運用 ... 60ヶ月目=0ヶ月運用（利息なし）
+    // 公式: 毎月額 × {回数 × (回数 - 1) / 2} × (年利 / 12)
+    // ※実務上、利息計算における円未満は切り捨てます
+    let totalCalculatedInterest = Math.floor(m * (totalMonths * (totalMonths - 1) / 2) * (r / 12));
+    finalAmount = invested + totalCalculatedInterest;
   }
-  invested=m*y*12;
 
-  finalAmount=total;
-  profit=total-invested;
-
-  trustOutput.innerHTML=`最終金額：${total.toFixed(0)}円<br>元本：${invested}円<br>利益：${profit.toFixed(0)}円`;
+  profit = finalAmount - invested;
+  trustOutput.innerHTML=`最終金額：${finalAmount.toLocaleString()}円<br>元本：${invested.toLocaleString()}円<br>利益：${profit.toLocaleString()}円`;
 }
 
 function applyTrustTax(){
   if(finalAmount === 0) return;
-  let tax = profit > 0 ? profit * 0.20315 : 0;
+  // 銀行・投資ともに税金は20.315%（国税・地方税）※円未満切り捨て
+  let tax = profit > 0 ? Math.floor(profit * 0.20315) : 0;
   let after = finalAmount - tax;
-  trustOutput.innerHTML=`税後：${after.toFixed(0)}円<br>利益：${(after-invested).toFixed(0)}円`;
+  trustOutput.innerHTML=`税引後最終額：${after.toLocaleString()}円<br>税引後利益：${(after-invested).toLocaleString()}円`;
 }
 
 function applyNISA(){
   if(finalAmount === 0) return;
   if(mode!=="invest"){
-    trustOutput.innerHTML="銀行は非課税対象外";
+    trustOutput.innerHTML="銀行預金はNISA（非課税）の対象外です。";
     return;
   }
-  trustOutput.innerHTML=`NISA：${finalAmount.toFixed(0)}円<br>利益：${profit.toFixed(0)}円`;
+  trustOutput.innerHTML=`NISA（非課税）：${Math.floor(finalAmount).toLocaleString()}円<br>利益：${Math.floor(profit).toLocaleString()}円`;
 }
 
 function limitLeverage(){
   let l=parseInt(leverage.value);
   if(isNaN(l)) return;
-  if(l>25)leverage.value=25;
+  if(l>25) leverage.value=25;
 }
 
 function calculateFX(){
-  saveAllData(); // 計算時に現在の入力を保存
+  saveAllData();
   let y=+yen.value;
   let l=+leverage.value;
   let b=+buyRate.value;
@@ -440,15 +408,13 @@ function calculateFX(){
   let final=usd*s;
 
   fxProfit=final-total;
-
-  fxOutput.innerHTML=`利益：${fxProfit.toFixed(0)}円`;
+  fxOutput.innerHTML=`利益：${Math.floor(fxProfit).toLocaleString()}円`;
 }
 
 function applyFXTax(){
-  let tax=fxProfit*0.20315;
-  fxOutput.innerHTML=`手取り：${(fxProfit-tax).toFixed(0)}円`;
+  let tax=Math.floor(fxProfit*0.20315);
+  fxOutput.innerHTML=`手取り：${Math.floor(fxProfit-tax).toLocaleString()}円`;
 }
 </script>
-
 </body>
 </html>
