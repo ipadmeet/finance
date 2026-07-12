@@ -322,7 +322,8 @@ function setMode(m){
   document.getElementById("investBtn").classList.remove("sub-active");
   document.getElementById("bankBtn").classList.remove("sub-active");
 
-  if(m reflections === "invest"){
+ // 正しいコード
+if (mode === "invest") {
     document.getElementById("title").innerText="投資シミュレーター";
     document.getElementById("monthlyLabel").innerText="毎月の投資額（円）";
     document.getElementById("investBtn").classList.add("sub-active");
