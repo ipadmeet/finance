@@ -172,16 +172,16 @@ input:focus {
 <br><br>
 
 <label id="monthlyLabel">毎月の投資額（円）</label><br>
-<input type="text" inputmode="none" id="monthly" value="10000"><br>
+<input type="text" inputmode="none" id="monthly" value=""><br>
 
-<label id="rateLabel">年利（%） ※-5〜+5</label><br>
-<input type="text" inputmode="none" id="rate" value="5.0"><br>
+<label id="rateLabel">年利（%）</label><br>
+<input type="text" inputmode="none" id="rate" value=""><br>
 
 <label>運用期間（年）</label><br>
-<input type="text" inputmode="none" id="years" value="5"><br>
+<input type="text" inputmode="none" id="years" value=""><br>
 
 <button class="calc" onclick="calculateTrust()">計算</button>
-<button class="tax" onclick="applyTrustTax()">課税後</button>
+<button class="tax" onclick="applyTrustTax()">課税</button>
 <button class="nisa" onclick="applyNISA()">NISA</button>
 
 <div class="result" id="trustOutput"></div>
@@ -192,19 +192,19 @@ input:focus {
 <h2>FXシミュレーター</h2>
 
 <label>投資金額（円）</label><br>
-<input type="text" inputmode="none" id="yen" value="100000"><br>
+<input type="text" inputmode="none" id="yen" value=""><br>
 
 <label>レバレッジ（最大25倍）</label><br>
-<input type="text" inputmode="none" id="leverage" value="20"><br>
+<input type="text" inputmode="none" id="leverage" value=""><br>
 
 <label>購入レート</label><br>
-<input type="text" inputmode="none" id="buyRate" value="161"><br>
+<input type="text" inputmode="none" id="buyRate" value=""><br>
 
 <label>売却レート</label><br>
-<input type="text" inputmode="none" id="sellRate" value="162"><br>
+<input type="text" inputmode="none" id="sellRate" value=""><br>
 
 <button class="calc" onclick="calculateFX()">計算</button>
-<button class="fxtax" onclick="applyFXTax()">課税後</button>
+<button class="fxtax" onclick="applyFXTax()">税金</button>
 
 <div class="result" id="fxOutput"></div>
 </div>
@@ -287,8 +287,8 @@ function closeKeyboard() {
 function triggerInputValidation() {
   if (!currentInput) return;
   if (currentInput.id === "years") limitYears();
-  if (currentInput.id === "rate") adjustRate();
   if (currentInput.id === "leverage") limitLeverage();
+  // 年利（rate）のバリデーションは制限を外したためここでは呼び出しません
 }
 
 // タブ切替
@@ -312,16 +312,16 @@ function setMode(m){
   if(m==="invest"){
     document.getElementById("title").innerText="投資シミュレーター";
     document.getElementById("monthlyLabel").innerText="毎月の投資額（円）";
-    document.getElementById("rateLabel").innerText="年利（%） ※-5〜+5";
-    document.getElementById("rate").value="5.0";
+    document.getElementById("rateLabel").innerText="年利（%）";
     document.getElementById("investBtn").classList.add("sub-active");
   }else{
     document.getElementById("title").innerText="銀行預金シミュレーター";
     document.getElementById("monthlyLabel").innerText="毎月の預入額（円）";
-    document.getElementById("rateLabel").innerText="年利（%） ※0〜5";
-    document.getElementById("rate").value="0.5";
+    document.getElementById("rateLabel").innerText="年利（%）";
     document.getElementById("bankBtn").classList.add("sub-active");
   }
+  // 入力ボックスは空のままにし、出力をクリア
+  document.getElementById("trustOutput").innerHTML = "";
 }
 
 function limitYears(){
@@ -332,37 +332,20 @@ function limitYears(){
   years.value=y;
 }
 
-function adjustRate(){
-  let r=parseFloat(rate.value);
-  if(isNaN(r)) return; 
-  if(rate.value.endsWith('.')) return;
-
-  if(mode==="invest"){
-    if(r>5)r=5;
-    if(r<-5)r=-5;
-  }else{
-    if(r>5)r=5;
-    if(r<0)r=0;
-  }
-  if(parseFloat(rate.value) > 5 || parseFloat(rate.value) < -5 || (mode==="bank" && parseFloat(rate.value) < 0)) {
-    rate.value=(Math.round(r*10)/10).toFixed(1);
-  }
-}
-
 function calculateTrust(){
   let m=+monthly.value;
   let r=+rate.value/100;
   let y=+years.value;
 
   let total=0;
-  let mr=r/12; // 年利を12ヶ月で割って月利を算出
+  let mr=r/12; // 月利に換算
 
-  // 投資・銀行ともに毎月積立の標準的なシミュレーション（期末発生ベース）に統一
+  // 投資・銀行ともに毎月積立の月次複利計算に統一
   for(let i=0; i<y*12; i++){
-    total = total * (1 + mr) + m;
+    total=(total+m)*(1+mr);
   }
-
   invested=m*y*12;
+
   finalAmount=total;
   profit=total-invested;
 
@@ -370,12 +353,15 @@ function calculateTrust(){
 }
 
 function applyTrustTax(){
-  let tax=profit*0.20315;
-  let after=finalAmount-tax;
+  if(finalAmount === 0) return;
+  // 利益がマイナスの場合は課税しない
+  let tax = profit > 0 ? profit * 0.20315 : 0;
+  let after = finalAmount - tax;
   trustOutput.innerHTML=`税後：${after.toFixed(0)}円<br>利益：${(after-invested).toFixed(0)}円`;
 }
 
 function applyNISA(){
+  if(finalAmount === 0) return;
   if(mode!=="invest"){
     trustOutput.innerHTML="銀行は非課税対象外";
     return;
