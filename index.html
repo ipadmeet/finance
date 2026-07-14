@@ -376,7 +376,7 @@ function calculateTrust(){
 
 function applyTrustTax(){
   if(finalAmount === 0) return;
-  // 銀行・投資ともに税金は20.315%（国税・地方税）※円未満切り捨て
+  // 利益がマイナスの時は課税しない（税金を0にする）
   let tax = profit > 0 ? Math.floor(profit * 0.20315) : 0;
   let after = finalAmount - tax;
   trustOutput.innerHTML=`税引後最終額：${after.toLocaleString()}円<br>税引後利益：${(after-invested).toLocaleString()}円`;
@@ -413,7 +413,8 @@ function calculateFX(){
 }
 
 function applyFXTax(){
-  let tax=Math.floor(fxProfit*0.20315);
+  // 利益がマイナスの時は課税しない（税金を0にする）
+  let tax = fxProfit > 0 ? Math.floor(fxProfit * 0.20315) : 0;
   fxOutput.innerHTML=`手取り：${Math.floor(fxProfit-tax).toLocaleString()}円`;
 }
 </script>
