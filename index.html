@@ -371,7 +371,7 @@ function calculateTrust(){
   }
 
   profit = finalAmount - invested;
-  trustOutput.innerHTML=`最終金額：${finalAmount.toLocaleString()}円<br>元本：${invested.toLocaleString()}円<br>利益：${profit.toLocaleString()}円`;
+  trustOutput.innerHTML=`最終金額：${Math.floor(finalAmount).toLocaleString()}円<br>元本：${Math.floor(invested).toLocaleString()}円<br>利益：${Math.floor(profit).toLocaleString()}円`;
 }
 
 function applyTrustTax(){
@@ -379,7 +379,7 @@ function applyTrustTax(){
   // 利益がマイナスの時は課税しない（税金を0にする）
   let tax = profit > 0 ? Math.floor(profit * 0.20315) : 0;
   let after = finalAmount - tax;
-  trustOutput.innerHTML=`税引後最終額：${after.toLocaleString()}円<br>税引後利益：${(after-invested).toLocaleString()}円`;
+  trustOutput.innerHTML=`税引後最終額：${Math.floor(after).toLocaleString()}円<br>税引後利益：${Math.floor(after-invested).toLocaleString()}円`;
 }
 
 function applyNISA(){
